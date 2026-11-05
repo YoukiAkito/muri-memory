@@ -11,7 +11,7 @@
  *   memory_rules    看现在适用的规矩 / 列出全部规矩
  *   memory_persona  看人设文件在哪、有没有；read 取全文，put 覆盖
  *
- * 工具注册在每个 root agent 的 scope 上，跟 dsh-purpose 一致。
+ * 工具注册在每个 root agent 的 scope 上，跟 muri-purpose 一致。
  */
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { toIso } from './util.js';

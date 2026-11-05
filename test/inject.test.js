@@ -14,7 +14,7 @@ import {
 } from '../src/inject.js';
 
 async function withTempDir(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'dsh-memory-inject-'));
+  const dir = mkdtempSync(join(tmpdir(), 'muri-memory-inject-'));
   try {
     return await fn(dir);
   } finally {

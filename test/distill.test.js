@@ -20,7 +20,7 @@ import {
 } from '../src/distill.js';
 
 async function withTempDir(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'dsh-memory-distill-'));
+  const dir = mkdtempSync(join(tmpdir(), 'muri-memory-distill-'));
   try {
     return await fn(dir);
   } finally {

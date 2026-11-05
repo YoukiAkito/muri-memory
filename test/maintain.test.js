@@ -17,7 +17,7 @@ import {
 } from '../src/maintain.js';
 
 async function withTempDir(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'dsh-memory-maintain-'));
+  const dir = mkdtempSync(join(tmpdir(), 'muri-memory-maintain-'));
   try {
     return await fn(dir);
   } finally {

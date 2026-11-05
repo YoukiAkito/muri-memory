@@ -1,5 +1,5 @@
 /**
- * dsh-memory —— 把记忆拆成一层一个模块。
+ * muri-memory —— 把记忆拆成一层一个模块。
  *
  * 八层：
  *   archive  原始流水：会话日志 / QQ 台账 / 日记，只读，谁都能查
@@ -30,13 +30,13 @@ import { PERSONA_SECTION_NAME, PERSONA_SECTION_ORDER, createPersona } from './pe
 import { RULE_SECTION_NAME, RULE_SECTION_ORDER, recentMessageText } from './inject.js';
 import { registerMemoryTools } from './tools.js';
 
-export const name = 'dsh-memory';
+export const name = 'muri-memory';
 export const inject = ['agents', 'tools', 'systemPrompt'];
 
 export async function apply(ctx) {
   const log = (level, message) => {
     const fn = ctx.logger?.[level];
-    if (typeof fn === 'function') fn.call(ctx.logger, `[dsh-memory] ${message}`);
+    if (typeof fn === 'function') fn.call(ctx.logger, `[muri-memory] ${message}`);
   };
 
   const env = process.env;
@@ -187,7 +187,7 @@ export async function apply(ctx) {
           return '';
         }
       }
-    }), 'dsh-memory.rules.section()');
+    }), 'muri-memory.rules.section()');
     log('info', `规则注入：已挂到系统提示第 ${RULE_SECTION_ORDER} 位`);
   } else {
     log('info', '规则注入已关（inject.enabled = false）');
@@ -201,7 +201,7 @@ export async function apply(ctx) {
       name: PERSONA_SECTION_NAME,
       order: PERSONA_SECTION_ORDER,
       text: () => persona.text()
-    }), 'dsh-memory.persona.section()');
+    }), 'muri-memory.persona.section()');
     const status = persona.stat();
     if (status.present) {
       log('info', `人设注入：已挂到系统提示第 ${PERSONA_SECTION_ORDER} 位，${status.chars} 字（${status.file}）`);
@@ -319,7 +319,7 @@ export async function apply(ctx) {
 /**
  * 开一个一次性会话干活。
  *
- * 跟 dsh-purpose 里那套一样：拿不到默认模型就直接失败，宁可这次不炼，
+ * 跟 muri-purpose 里那套一样：拿不到默认模型就直接失败，宁可这次不炼，
  * 也不要瞎猜一个模型名。preset 不挂的话只有宿主侧工具，mem_save 都调不到。
  */
 function makeWorkerCreator(ctx, config, log) {
@@ -335,7 +335,7 @@ function makeWorkerCreator(ctx, config, log) {
     const handle = await ctx.agents.create({
       // sessionId 必须给：不给的话会话 id 是自动编号的 "session-1"，而 create 内部
       // 要校验 agent.id === session.id，直接抛 agent id "undefined" does not match。
-      sessionId: `dsh-memory-distill-${randomUUID()}`,
+      sessionId: `muri-memory-distill-${randomUUID()}`,
       agentOptions: {
         provider: selection.provider,
         model: selection.model,
@@ -352,7 +352,7 @@ function makeWorkerCreator(ctx, config, log) {
     });
 
     try {
-      handle.agent.followup({ content: [{ type: 'text', text: prompt }], source: { kind: 'plugin:dsh-memory' } });
+      handle.agent.followup({ content: [{ type: 'text', text: prompt }], source: { kind: 'plugin:muri-memory' } });
       const timer = setTimeout(() => {
         try {
           handle.agent.cancel?.('time-box');

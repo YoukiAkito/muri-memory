@@ -14,7 +14,7 @@ import {
 } from '../src/persona.js';
 
 async function withTempDir(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'dsh-memory-persona-'));
+  const dir = mkdtempSync(join(tmpdir(), 'muri-memory-persona-'));
   try {
     return await fn(dir);
   } finally {

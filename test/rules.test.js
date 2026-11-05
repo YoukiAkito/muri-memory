@@ -14,7 +14,7 @@ import {
 } from '../src/rules.js';
 
 async function withTempDir(fn) {
-  const dir = mkdtempSync(join(tmpdir(), 'dsh-memory-rules-'));
+  const dir = mkdtempSync(join(tmpdir(), 'muri-memory-rules-'));
   try {
     return await fn(dir);
   } finally {

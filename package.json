@@ -1,5 +1,5 @@
 {
-  "name": "dsh-memory",
+  "name": "muri-memory",
   "version": "0.1.0",
   "description": "Modular memory layers for DeepSeek Harness: archive (raw streams) / cards (engram-backed) / recall (query for the agent). 记忆系统按层拆成可插拔模块——档案层存原始流水、卡片层存提炼结果、检索层给 agent 查询，层之间只通过接口通信。",
   "type": "module",
