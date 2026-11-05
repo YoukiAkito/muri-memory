@@ -1,4 +1,4 @@
-# dsh-memory
+# muri-memory
 
 把记忆拆成**一层一个模块**，层与层之间只通过接口通信 —— 跟 DSH「万物皆插件」一个路子。
 
@@ -28,10 +28,10 @@
 
 ```bash
 cd <某个能用 pnpm 的地方>
-pnpm add file:/path/to/dsh-memory
+pnpm add file:/path/to/muri-memory
 ```
 
-然后在 profile 的 `package.json` 里把 `dsh-memory` 加进 `dsh.profile.bundles`，重启宿主。
+然后在 profile 的 `package.json` 里把 `muri-memory` 加进 `dsh.profile.bundles`，重启宿主。
 
 配置：`~/.dsh/memory/config.json`（不配就用默认值，见 `config.example.json`）。
 
