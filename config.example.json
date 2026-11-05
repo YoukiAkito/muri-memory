@@ -1,0 +1,49 @@
+{
+  "enabled": true,
+  "archive": {
+    "dshHome": "",
+    "qqHistory": "",
+    "limit": 200,
+    "days": 2
+  },
+  "cards": {
+    "engramDb": "",
+    "linksDb": "",
+    "limit": 20
+  },
+  "recall": {
+    "limit": 10,
+    "depth": 1
+  },
+  "distill": {
+    "enabled": true,
+    "hour": 4,
+    "days": 1,
+    "maxRecords": 300,
+    "maxChars": 24000,
+    "maxCards": 12,
+    "timeBoxMs": 900000,
+    "workerPreset": ""
+  },
+  "maintain": {
+    "enabled": true,
+    "hour": 5,
+    "maxCards": 500,
+    "similarThreshold": 0.9,
+    "maxGroups": 20
+  },
+  "rules": {
+    "enabled": true,
+    "maxRules": 5
+  },
+  "inject": {
+    "enabled": true,
+    "contextMessages": 3,
+    "contextChars": 4000
+  },
+  "persona": {
+    "enabled": true,
+    "file": "",
+    "maxChars": 12000
+  }
+}
