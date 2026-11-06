@@ -7,7 +7,7 @@
 | 层 | 管什么 | 状态 |
 |---|---|---|
 | `archive` 档案层 | 原始流水：DSH 会话日志 / QQ 台账 / 日记。只读 | ✅ |
-| `cards` 卡片层 | 提炼出来的卡片本体读 engram；卡片之间的边存自己的 `links.db` | ✅ |
+| `cards` 卡片层 | 卡片本体读 engram；边走关系层（engram 判过的 + 自己的 `links.db`），来源可换 | ✅ |
 | `recall` 检索层 | 给 agent 用的查询入口：返回结果 + 还能往哪走 | ✅ |
 | `distill` 提炼层 | 每天到点把流水炼成卡片（也能手动） | ✅ |
 | `maintain` 维护层 | 每天巡检：找重复卡片、找悬空边。**只报告不改数据** | ✅ |
@@ -77,8 +77,22 @@ const rules = ctx.get('memory.rules', false);
 - `supersedes` —— 这张卡取代了那张
 - `conflicts_with` —— 两张说的互相矛盾
 
-边存在 `<dataDir>/links.db`，跟 engram 分开。理由：卡片是资产，跟着 `engram.db` 走；
-边是可以重算出来的派生数据，换机器重新连一遍就行，不必往别人的库里加表。
+边**不只有一处来源**（`src/relations.js`）：
+
+- `engram` —— `mem_judge` 判过的 `memory_relations`。这是权威判定，我在存卡之后自己判的。
+  关系表存的是 `sync_id`，读的时候 join `observations` 换回 `obs:123` 这种卡片 id。
+  只认 `judgment_status = 'judged'` 且没被 `superseded_at` 作废的；`pending`（还没判的候选）
+  和 `not_conflict`（「这两张不冲突」）都不算边。
+- `links` —— 自己的边车库 `<dataDir>/links.db`，只放 engram 表达不了的，
+  主要是 `derived_from`（端点可以是 `qq:c2c:…` / `sess:…` 这类原话 id，不一定是卡片）。
+
+早先只读 `links.db`，于是 engram 判过的 46 条全被无视，`memory_stat` 一直报 `links: 0`。
+
+**来源是可替换的**：`createRelations({ sources: [...] })` 里每一项只要长得像
+`{ name, available, edges(from, query), all(query), count() }` 就能接进来。想换掉 engram、
+换掉 links.db、或者再挂一个向量库，只换这一个数组，`cards.js` 与所有调用方一行都不用动。
+两个来源说了同一条关系时按 `from→to→relation` 去重，**先来的来源优先**（engram 在前）。
+`memory_stat` 里的 `links` 是总和，`linkSources` 是按来源拆开的数。
 
 ## 检索层为什么返回 `h` 和 `next`
 
@@ -179,7 +193,7 @@ when: 私聊 转发 群里
 | 路径 | 装什么 | 不带会怎样 |
 |---|---|---|
 | `~/.engram/` | **卡片本体**（观察、决策、踩坑记录），`engram.db` 三件套 | 记忆全丢，等于从零开始 |
-| `~/.dsh/memory/` | 人设 `persona.md`、规矩 `rules/`、边车库 `links.db` | 没人设、没规矩、卡片之间的关系断 |
+| `~/.dsh/memory/` | 人设 `persona.md`、规矩 `rules/`、边车库 `links.db` | 没人设、没规矩、只剩 engram 那部分边 |
 | `~/.dsh/purpose/` | 驱动值、念头账本、出门看过的记录 | 性格从头长起，念头全忘 |
 | `~/.dsh/diary/` | 自己写的日记 | 只丢日记，不影响运行 |
 

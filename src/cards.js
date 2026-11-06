@@ -5,12 +5,15 @@
  *   - **卡片本体**存在 engram（`~/.engram/engram.db` 的 `observations` 表）。
  *     好处是跨设备只要拷这一个文件，不用 git、不用跑 `engram sync`。
  *     写卡片仍然走 engram 自己的 `mem_save`（我在会话里直接调），这里只读。
- *   - **边**存在边车库 `~/.dsh/memory/links.db`。
- *     理由：卡片是资产，边是可推导的——换机器时卡片随 db 走，边重算一遍就有。
- *     而且不往别人的库里加表，engram 升级/迁移时不会踩到我们。
+ *   - **边**走关系层（`src/relations.js`），本文件不再自己拼 SQL。
+ *     边其实有两个来源：engram 自己判过的（`memory_relations`，实测 51 条）
+ *     和自己的边车库（`~/.dsh/memory/links.db`，只放 engram 表达不了的，
+ *     主要是「这张卡从哪段原话提炼的」）。早先只读 links.db，engram 判过的
+ *     51 条全被无视，`stat()` 一直报 links: 0。
+ *     现在两个来源都接进来，且来源本身是可替换的——换库不改调用方。
  *
  * 三种边（架构文档定的）：
- *   derived_from  卡片 → 原话（archive 里的 id）
+ *   derived_from  卡片 → 原话（archive 里的 id），只可能出现在 links.db
  *   supersedes    新卡替旧卡
  *   conflicts_with 两条矛盾
  *
@@ -20,6 +23,7 @@
  */
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { createEngramRelationSource, createLinkTableSource, createRelations } from './relations.js';
 
 /** 三种边。别的名字一律拒收——这是架构文档定的口径，不是开放的字符串。 */
 export const RELATIONS = Object.freeze(['derived_from', 'supersedes', 'conflicts_with']);
@@ -105,6 +109,16 @@ export async function createCards(options = {}) {
       log('warn', `卡片层：建边表失败 ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  // 关系层：边有两个来源，都接进来，顺序就是优先级（engram 是权威判定，
+  // 边车库是补充）。以后要换库，只换这里传进去的 source，方法体一行不用动。
+  const relations = createRelations({
+    sources: [
+      createEngramRelationSource({ store, log }),
+      createLinkTableSource({ links, log })
+    ],
+    log
+  });
 
   function searchViaFts(text, limit) {
     if (store === null) return [];
@@ -235,46 +249,23 @@ export async function createCards(options = {}) {
       }
     },
 
-    /** 某个卡片出发的所有边。 */
+    /**
+     * 某个卡片出发的所有边。
+     *
+     * 走关系层，不直接查表——engram 判过的关系和自己边车库里的边都在里面。
+     * `direction` 选 `'out'`（默认）/ `'in'` / `'both'`；engram 那边关系是双向存的，
+     * 边车库只有正向。
+     */
     edges(fromCard, options = {}) {
-      if (links === null) return [];
-      const { relation = '' } = options;
-      try {
-        const rows =
-          relation === ''
-            ? links.prepare('SELECT * FROM card_links WHERE from_card = ? ORDER BY created_at DESC').all(String(fromCard))
-            : links
-                .prepare('SELECT * FROM card_links WHERE from_card = ? AND relation = ? ORDER BY created_at DESC')
-                .all(String(fromCard), String(relation));
-        return rows.map((row) => ({
-          from: row.from_card,
-          to: row.to_ref,
-          relation: row.relation,
-          reason: row.reason ?? '',
-          at: row.created_at
-        }));
-      } catch {
-        return [];
-      }
+      const { relation = '', direction = 'out' } = options;
+      return relations.edges(fromCard, { relation, direction });
     },
 
-    /** 边车库里的全部边（维护层查悬空边要用）。 */
+    /** 全部边（维护层查悬空边要用）。 */
     allEdges(options = {}) {
-      if (links === null) return [];
       const { limit = 5000 } = options;
       const cap = Math.max(1, Math.min(50_000, Number(limit) || 5000));
-      try {
-        const rows = links.prepare('SELECT * FROM card_links ORDER BY created_at DESC LIMIT ?').all(cap);
-        return rows.map((row) => ({
-          from: row.from_card,
-          to: row.to_ref,
-          relation: row.relation,
-          reason: row.reason ?? '',
-          at: row.created_at
-        }));
-      } catch {
-        return [];
-      }
+      return relations.all({ limit: cap });
     },
 
     /**
@@ -318,21 +309,23 @@ export async function createCards(options = {}) {
       return { card: String(cardId), cards, originals };
     },
 
-    /** 统计。 */
+    /** 统计。`links` 是全部边（两个来源之和），`linkSources` 是按来源拆开数。 */
     stat() {
       let observations = 0;
-      let linksCount = 0;
       try {
         observations = store === null ? 0 : Number(store.prepare('SELECT count(*) c FROM observations WHERE deleted_at IS NULL').get()?.c ?? 0);
       } catch {
         observations = 0;
       }
-      try {
-        linksCount = links === null ? 0 : Number(links.prepare('SELECT count(*) c FROM card_links').get()?.c ?? 0);
-      } catch {
-        linksCount = 0;
-      }
-      return { observations, links: linksCount, engramDb, linksDb, available: store !== null };
+      const edgeStat = relations.stat();
+      return {
+        observations,
+        links: edgeStat.total,
+        linkSources: edgeStat.bySource,
+        engramDb,
+        linksDb,
+        available: store !== null
+      };
     },
 
     /** 收尾：关掉两个连接。 */
